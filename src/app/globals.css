@@ -1,26 +1,83 @@
 @import "tailwindcss";
 
+/* Cal.com 風のニュートラルなデザイントークン（bg / text / border の3系統） */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --bg-default: #ffffff;
+  --bg-muted: #f9fafb;
+  --bg-subtle: #f3f4f6;
+  --bg-emphasis: #e5e7eb;
+  --bg-inverted: #111827;
+  --text-emphasis: #111827;
+  --text-default: #374151;
+  --text-subtle: #6b7280;
+  --text-muted: #9ca3af;
+  --text-inverted: #ffffff;
+  --border-default: #e5e7eb;
+  --border-subtle: #f3f4f6;
+  --border-emphasis: #d1d5db;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg-default: #101010;
+    --bg-muted: #1c1c1c;
+    --bg-subtle: #2b2b2b;
+    --bg-emphasis: #444444;
+    --bg-inverted: #f3f4f6;
+    --text-emphasis: #f3f4f6;
+    --text-default: #d6d6d6;
+    --text-subtle: #a5a5a5;
+    --text-muted: #747474;
+    --text-inverted: #101010;
+    --border-default: #2b2b2b;
+    --border-subtle: #1c1c1c;
+    --border-emphasis: #575757;
   }
 }
 
+@theme inline {
+  --color-default: var(--bg-default);
+  --color-muted: var(--bg-muted);
+  --color-subtle: var(--bg-subtle);
+  --color-emphasis: var(--bg-emphasis);
+  --color-inverted: var(--bg-inverted);
+  --color-fg-emphasis: var(--text-emphasis);
+  --color-fg: var(--text-default);
+  --color-fg-subtle: var(--text-subtle);
+  --color-fg-muted: var(--text-muted);
+  --color-fg-inverted: var(--text-inverted);
+  --color-line: var(--border-default);
+  --color-line-subtle: var(--border-subtle);
+  --color-line-emphasis: var(--border-emphasis);
+  --font-sans: var(--font-inter), "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-default);
+  color: var(--text-default);
+}
+
+@utility btn {
+  @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-[10px] px-4 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-fg-emphasis focus-visible:ring-offset-2 focus-visible:ring-offset-default focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40;
+}
+@utility btn-primary {
+  @apply btn bg-inverted text-fg-inverted hover:opacity-90;
+}
+@utility btn-secondary {
+  @apply btn border border-line bg-default text-fg-emphasis shadow-xs hover:border-line-emphasis hover:bg-muted;
+}
+@utility btn-minimal {
+  @apply btn text-fg-subtle hover:bg-subtle hover:text-fg-emphasis;
+}
+@utility btn-destructive {
+  @apply btn border border-line bg-default text-red-600 shadow-xs hover:border-red-200 hover:bg-red-50 dark:text-red-400 dark:hover:border-red-900 dark:hover:bg-red-950;
+}
+@utility btn-lg {
+  @apply h-11! px-6! text-base!;
+}
+@utility field {
+  @apply h-9 rounded-[10px] border border-line bg-default px-3 text-sm text-fg-emphasis shadow-xs transition-colors hover:border-line-emphasis focus:border-fg-emphasis focus:ring-1 focus:ring-fg-emphasis focus:outline-none aria-invalid:border-red-500;
+}
+@utility card {
+  @apply rounded-xl border border-line bg-default;
 }

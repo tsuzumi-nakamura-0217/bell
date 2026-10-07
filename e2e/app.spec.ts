@@ -9,7 +9,7 @@ test("テンプレートがなければ作成を促し、作成するとすぐ�
   await page.goto("/");
   await expect(page.getByText("テンプレートを作成してください")).toBeVisible();
 
-  await sidebar(page).getByRole("button", { name: "＋ 新規作成" }).click();
+  await sidebar(page).getByRole("button", { name: "新規作成" }).click();
   await page.getByLabel("テンプレート名").fill("LT大会 5分");
   await page.getByLabel("ベル2 回数").selectOption("2");
   await page.getByRole("button", { name: "ベルを追加" }).click();
@@ -28,7 +28,7 @@ test("テンプレートがなければ作成を促し、作成するとすぐ�
 
 test("入力が不正なら保存せず、該当箇所にエラーを表示する", async ({ page }) => {
   await page.goto("/");
-  await sidebar(page).getByRole("button", { name: "＋ 新規作成" }).click();
+  await sidebar(page).getByRole("button", { name: "新規作成" }).click();
   await page.getByLabel("テンプレート名").fill("   ");
   await page.getByLabel("ベル1 秒").fill("75");
   await page.getByRole("button", { name: "保存" }).click();
@@ -40,7 +40,7 @@ test("入力が不正なら保存せず、該当箇所にエラーを表示す�
 
 test("ベルの行を削除できる。最後の1行は削除できない", async ({ page }) => {
   await page.goto("/");
-  await sidebar(page).getByRole("button", { name: "＋ 新規作成" }).click();
+  await sidebar(page).getByRole("button", { name: "新規作成" }).click();
   await page.getByRole("button", { name: "ベル2を削除" }).click();
   await expect(page.getByLabel("ベル2 分")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "ベル1を削除" })).toBeDisabled();
@@ -49,7 +49,7 @@ test("ベルの行を削除できる。最後の1行は削除できない", asyn
 test("新規作成をキャンセルすると元のタイマーに戻る", async ({ page, request }) => {
   await createTemplateViaApi(request, { name: "元のテンプレ", bells: [{ at: 60, count: 1 }] });
   await openTemplate(page, "元のテンプレ");
-  await sidebar(page).getByRole("button", { name: "＋ 新規作成" }).click();
+  await sidebar(page).getByRole("button", { name: "新規作成" }).click();
   await page.getByRole("button", { name: "キャンセル" }).click();
   await expect(page.getByRole("heading", { name: "元のテンプレ" })).toBeVisible();
 });

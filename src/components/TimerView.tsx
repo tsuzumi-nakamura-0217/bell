@@ -5,6 +5,7 @@ import { useTimer } from "@/hooks/use-timer";
 import type { Template } from "@/lib/bells";
 import { endMs, nextBell } from "@/lib/schedule";
 import { formatClock } from "@/lib/time";
+import { BellIcon, MaximizeIcon, PauseIcon, PencilIcon, PlayIcon, RotateIcon } from "./icons";
 
 type ClockMode = "elapsed" | "remaining";
 
@@ -69,86 +70,142 @@ export function TimerView({ template, onEdit, onRunningChange }: TimerViewProps)
     action.catch(() => {});
   }
 
+  const card = overtime ? "rounded-xl border border-white/25 bg-white/5" : "card";
+  const secondary = overtime
+    ? "btn border border-white/40 text-white hover:bg-white/10"
+    : "btn-secondary";
+  const primary = overtime ? "btn bg-white text-red-700 hover:bg-red-50" : "btn-primary";
+
   return (
     <section
       data-testid="timer-root"
       data-overtime={overtime ? "true" : "false"}
-      className={`flex min-h-screen flex-1 flex-col gap-6 px-4 py-6 transition-colors ${
-        overtime ? "bg-red-600 text-white" : "bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100"
+      className={`flex min-h-screen flex-1 flex-col transition-colors ${
+        overtime ? "bg-red-600 text-white" : "bg-default text-fg"
       }`}
     >
-      <header className="flex flex-wrap items-center gap-3">
-        <h1 className="flex-1 text-xl font-bold">{template.name}</h1>
-        <button type="button" onClick={onEdit} className="rounded border border-current px-3 py-1 text-sm">
+      <header
+        className={`flex flex-wrap items-center gap-3 border-b px-4 py-5 md:px-8 ${
+          overtime ? "border-white/25" : "border-line"
+        }`}
+      >
+        <div className="min-w-0 flex-1">
+          <h1 className={`truncate font-semibold tracking-tight text-xl md:text-2xl ${overtime ? "" : "text-fg-emphasis"}`}>{template.name}</h1>
+          <p className={`text-sm ${overtime ? "text-white/80" : "text-fg-subtle"}`}>
+            ベル{bells.length}つ・終了 {formatClock(end / 1000)}
+          </p>
+        </div>
+        <button type="button" onClick={onEdit} className={secondary}>
+          <PencilIcon />
           編集
         </button>
-        <button type="button" onClick={toggleFullscreen} className="rounded border border-current px-3 py-1 text-sm">
+        <button type="button" onClick={toggleFullscreen} className={secondary}>
+          <MaximizeIcon />
           全画面
         </button>
       </header>
 
-      {!audioSupported && (
-        <p role="alert" className="rounded bg-yellow-100 p-3 text-sm text-yellow-900">
-          このブラウザでは音を鳴らせません（タイマーは使えます）。
-        </p>
-      )}
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 p-4 md:p-8">
+        {!audioSupported && (
+          <p
+            role="alert"
+            className="rounded-[10px] border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
+          >
+            このブラウザでは音を鳴らせません（タイマーは使えます）。
+          </p>
+        )}
 
-      <section className="flex flex-1 flex-col items-center justify-center gap-4">
-        <span data-testid="clock-mode" className="text-sm opacity-70">
-          {overtime ? "超過時間" : mode === "elapsed" ? "経過時間" : "残り時間"}
-        </span>
-        <button
-          type="button"
-          data-testid="clock"
-          aria-label="表示を切り替え"
-          onClick={() => setMode((m) => (m === "elapsed" ? "remaining" : "elapsed"))}
-          className="font-mono text-[min(22vw,14rem)] leading-none font-bold tabular-nums"
-        >
-          {clockText}
-        </button>
-        <p data-testid="next-bell" className="text-lg">
-          {nextText}
-        </p>
-      </section>
+        <div className={`${card} flex flex-col items-center justify-center gap-6 px-4 py-10 md:flex-1 md:py-14`}>
+          <span
+            data-testid="clock-mode"
+            className={`rounded-md px-2.5 py-1 text-xs font-medium ${
+              overtime ? "bg-white text-red-700" : "bg-subtle text-fg-emphasis"
+            }`}
+          >
+            {overtime ? "超過時間" : mode === "elapsed" ? "経過時間" : "残り時間"}
+          </span>
+          <button
+            type="button"
+            data-testid="clock"
+            aria-label="表示を切り替え"
+            title="クリックで経過時間／残り時間を切り替え"
+            onClick={() => setMode((m) => (m === "elapsed" ? "remaining" : "elapsed"))}
+            className={`rounded-xl px-4 text-[min(18vw,12rem)] leading-none font-semibold tracking-tight tabular-nums ${
+              overtime ? "" : "text-fg-emphasis"
+            }`}
+          >
+            {clockText}
+          </button>
+          <p data-testid="next-bell" className={`text-base md:text-lg ${overtime ? "text-white/90" : "text-fg-subtle"}`}>
+            {nextText}
+          </p>
 
-      <div className="flex flex-wrap justify-center gap-3">
-        <button
-          type="button"
-          disabled={!ready}
-          onClick={toggle}
-          className={`min-w-32 rounded px-6 py-3 text-lg font-semibold disabled:opacity-50 ${
-            overtime ? "bg-white text-red-700" : "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-          }`}
-        >
-          {toggleLabel}
-        </button>
-        <button type="button" disabled={!ready} onClick={reset} className="rounded border border-current px-6 py-3 text-lg">
-          リセット
-        </button>
-        <button type="button" disabled={!ready} onClick={ringNow} className="rounded border border-current px-6 py-3 text-lg">
-          ベルを鳴らす
-        </button>
-      </div>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button type="button" disabled={!ready} onClick={toggle} className={`${primary} btn-lg min-w-36`}>
+              {running ? <PauseIcon /> : <PlayIcon />}
+              {toggleLabel}
+            </button>
+            <button type="button" disabled={!ready} onClick={reset} className={`${secondary} btn-lg`}>
+              <RotateIcon />
+              リセット
+            </button>
+            <button type="button" disabled={!ready} onClick={ringNow} className={`${secondary} btn-lg`}>
+              <BellIcon />
+              ベルを鳴らす
+            </button>
+          </div>
 
-      <ol className="mx-auto flex w-full max-w-md flex-col gap-1">
-        {bells.map((bell, i) => {
-          const done = bell.at * 1000 <= elapsed;
-          return (
-            <li
-              key={bell.at}
-              data-testid="bell-item"
-              data-done={done ? "true" : "false"}
-              className={`grid grid-cols-[4rem_1fr_2.5rem] items-center gap-3 rounded px-3 py-1 ${done ? "opacity-40" : ""}`}
+          <p className={`text-xs ${overtime ? "text-white/70" : "text-fg-muted"}`}>
+            <kbd
+              className={`rounded border px-1.5 py-0.5 font-sans text-[11px] ${
+                overtime ? "border-white/40" : "border-line bg-muted text-fg-subtle"
+              }`}
             >
-              <span className="font-mono tabular-nums">{formatClock(bell.at)}</span>
-              <span className="text-right">{"🔔".repeat(bell.count)}</span>
-              <span className="text-right text-sm">{i === bells.length - 1 ? "終了" : ""}</span>
-            </li>
-          );
-        })}
-      </ol>
+              Space
+            </kbd>{" "}
+            でスタート／一時停止
+          </p>
+        </div>
 
-      <p className="text-center text-xs opacity-60">スペースキーでスタート／一時停止</p>
+        <div className={card}>
+          <div className={`border-b px-4 py-3 md:px-5 ${overtime ? "border-white/25" : "border-line"}`}>
+            <h2 className={`text-sm font-medium ${overtime ? "" : "text-fg-emphasis"}`}>スケジュール</h2>
+          </div>
+          <ol className={`divide-y ${overtime ? "divide-white/15" : "divide-line"}`}>
+            {bells.map((bell, i) => {
+              const done = bell.at * 1000 <= elapsed;
+              const last = i === bells.length - 1;
+              return (
+                <li
+                  key={bell.at}
+                  data-testid="bell-item"
+                  data-done={done ? "true" : "false"}
+                  className={`flex items-center gap-4 px-4 py-3 transition-opacity md:px-5 ${done ? "opacity-40" : ""}`}
+                >
+                  <span className={`w-14 font-medium tabular-nums ${overtime ? "" : "text-fg-emphasis"}`}>
+                    {formatClock(bell.at)}
+                  </span>
+                  <span className="flex flex-1 items-center gap-1">
+                    <span className="sr-only">{bell.count}回</span>
+                    {Array.from({ length: bell.count }, (_, k) => (
+                      <BellIcon key={k} className={`size-4 ${overtime ? "" : "text-fg-subtle"}`} />
+                    ))}
+                  </span>
+                  {last && (
+                    <span
+                      className={`rounded-md px-2 py-0.5 text-xs font-medium ${
+                        overtime ? "bg-white text-red-700" : "bg-inverted text-fg-inverted"
+                      }`}
+                    >
+                      終了
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      </div>
     </section>
   );
 }

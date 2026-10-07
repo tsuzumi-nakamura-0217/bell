@@ -4,10 +4,10 @@ import { useState } from "react";
 import { ApiError, createTemplate, deleteTemplate, updateTemplate } from "@/lib/api-client";
 import { MAX_BELLS, MAX_COUNT, templateInputSchema, type Template } from "@/lib/bells";
 import { issuesToErrors, newRow, rowsToCandidate, templateToRows, type BellRow, type FormErrors } from "@/lib/editor-form";
+import { BellIcon, PlusIcon, TrashIcon } from "./icons";
 
 const NETWORK_ERROR = "通信に失敗しました。接続を確認してもう一度お試しください。";
 const COUNT_OPTIONS = Array.from({ length: MAX_COUNT }, (_, i) => i + 1);
-const inputClass = "rounded border border-zinc-300 px-2 py-1 dark:border-zinc-600 dark:bg-zinc-900";
 
 interface TemplateEditorProps {
   initial?: Template;
@@ -76,111 +76,111 @@ export function TemplateEditor({ initial, onSaved, onCancel, onDeleted }: Templa
 
   return (
     <form
-      className="flex flex-col gap-6"
+      className="card flex flex-col"
       onSubmit={(e) => {
         e.preventDefault();
         void save();
       }}
     >
-      <label className="flex flex-col gap-1">
-        <span className="font-semibold">テンプレート名</span>
-        <input
-          className={inputClass}
-          value={name}
-          maxLength={100}
-          onChange={(e) => setName(e.target.value)}
-          aria-invalid={errors.name ? true : undefined}
-        />
-        {errors.name && <span className="text-sm text-red-600">{errors.name}</span>}
-      </label>
+      <div className="flex flex-col gap-8 p-5 md:p-6">
+        <label className="flex flex-col gap-2">
+          <span className="text-sm font-medium text-fg-emphasis">テンプレート名</span>
+          <input
+            className="field w-full"
+            value={name}
+            maxLength={100}
+            placeholder="例：LT大会 5分"
+            onChange={(e) => setName(e.target.value)}
+            aria-invalid={errors.name ? true : undefined}
+          />
+          {errors.name && <span className="text-xs text-red-600 dark:text-red-400">{errors.name}</span>}
+        </label>
 
-      <fieldset className="flex flex-col gap-3">
-        <legend className="mb-2 font-semibold">ベル（最後のベルが終了時刻）</legend>
-        {rows.map((row, i) => (
-          <div key={row.key} className="flex flex-col gap-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="w-14 text-sm text-zinc-500">ベル{i + 1}</span>
-              <input
-                className={`${inputClass} w-16 text-right`}
-                inputMode="numeric"
-                aria-label={`ベル${i + 1} 分`}
-                value={row.minutes}
-                onChange={(e) => updateRow(i, { minutes: e.target.value })}
-              />
-              <span>分</span>
-              <input
-                className={`${inputClass} w-16 text-right`}
-                inputMode="numeric"
-                aria-label={`ベル${i + 1} 秒`}
-                value={row.seconds}
-                onChange={(e) => updateRow(i, { seconds: e.target.value })}
-              />
-              <span>秒に</span>
-              <select
-                className={inputClass}
-                aria-label={`ベル${i + 1} 回数`}
-                value={row.count}
-                onChange={(e) => updateRow(i, { count: Number(e.target.value) })}
-              >
-                {COUNT_OPTIONS.map((n) => (
-                  <option key={n} value={n}>
-                    {n}回
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="rounded px-2 py-1 text-sm text-zinc-500 hover:bg-zinc-100 disabled:opacity-30 dark:hover:bg-zinc-800"
-                aria-label={`ベル${i + 1}を削除`}
-                disabled={rows.length === 1}
-                onClick={() => setRows((current) => current.filter((_, j) => j !== i))}
-              >
-                ✕
-              </button>
-            </div>
-            {errors.rows[i] && <span className="ml-16 text-sm text-red-600">{errors.rows[i]}</span>}
-          </div>
-        ))}
-        <button
-          type="button"
-          className="self-start rounded border border-zinc-300 px-3 py-1 text-sm disabled:opacity-40 dark:border-zinc-600"
-          disabled={rows.length >= MAX_BELLS}
-          onClick={addRow}
-        >
-          ベルを追加
-        </button>
-        {errors.general && <span className="text-sm text-red-600">{errors.general}</span>}
-      </fieldset>
+        <fieldset className="flex flex-col gap-3">
+          <legend className="mb-1 text-sm font-medium text-fg-emphasis">ベル</legend>
+          <p className="-mt-1 text-xs text-fg-subtle">最後のベルが終了時刻になります。</p>
+          <ul className="divide-y divide-line overflow-hidden rounded-[10px] border border-line">
+            {rows.map((row, i) => (
+              <li key={row.key} className="flex flex-col gap-1.5 bg-default px-3 py-3 sm:px-4">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-fg">
+                  <span className="mr-1 inline-flex h-6 min-w-14 items-center justify-center gap-1 rounded-md bg-subtle px-2 text-xs font-medium text-fg-emphasis">
+                    <BellIcon className="size-3" />
+                    ベル{i + 1}
+                  </span>
+                  <input
+                    className="field w-16 text-right tabular-nums"
+                    inputMode="numeric"
+                    aria-label={`ベル${i + 1} 分`}
+                    value={row.minutes}
+                    onChange={(e) => updateRow(i, { minutes: e.target.value })}
+                  />
+                  <span>分</span>
+                  <input
+                    className="field w-16 text-right tabular-nums"
+                    inputMode="numeric"
+                    aria-label={`ベル${i + 1} 秒`}
+                    value={row.seconds}
+                    onChange={(e) => updateRow(i, { seconds: e.target.value })}
+                  />
+                  <span>秒に</span>
+                  <select
+                    className="field pr-8"
+                    aria-label={`ベル${i + 1} 回数`}
+                    value={row.count}
+                    onChange={(e) => updateRow(i, { count: Number(e.target.value) })}
+                  >
+                    {COUNT_OPTIONS.map((n) => (
+                      <option key={n} value={n}>
+                        {n}回
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="btn-minimal ml-auto size-9 px-0!"
+                    aria-label={`ベル${i + 1}を削除`}
+                    disabled={rows.length === 1}
+                    onClick={() => setRows((current) => current.filter((_, j) => j !== i))}
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
+                {errors.rows[i] && <span className="text-xs text-red-600 dark:text-red-400">{errors.rows[i]}</span>}
+              </li>
+            ))}
+          </ul>
+          <button type="button" className="btn-minimal self-start px-2!" disabled={rows.length >= MAX_BELLS} onClick={addRow}>
+            <PlusIcon />
+            ベルを追加
+          </button>
+          {errors.general && <span className="text-xs text-red-600 dark:text-red-400">{errors.general}</span>}
+        </fieldset>
 
-      {message && (
-        <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {message}
-        </p>
-      )}
-
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded bg-zinc-900 px-5 py-2 font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-zinc-900"
-        >
-          保存
-        </button>
-        <button type="button" disabled={busy} onClick={onCancel} className="text-sm underline disabled:opacity-50">
-          キャンセル
-        </button>
-        {initial && onDeleted && (
-          <>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void remove()}
-              className="ml-auto rounded border border-red-300 px-3 py-2 text-sm text-red-700 disabled:opacity-50"
-            >
-              このテンプレートを削除
-            </button>
-          </>
+        {message && (
+          <p
+            role="alert"
+            className="rounded-[10px] border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+          >
+            {message}
+          </p>
         )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 rounded-b-xl border-t border-line bg-muted px-5 py-4 md:px-6">
+        {initial && onDeleted && (
+          <button type="button" disabled={busy} onClick={() => void remove()} className="btn-destructive">
+            <TrashIcon />
+            このテンプレートを削除
+          </button>
+        )}
+        <div className="ml-auto flex gap-2">
+          <button type="button" disabled={busy} onClick={onCancel} className="btn-minimal">
+            キャンセル
+          </button>
+          <button type="submit" disabled={busy} className="btn-primary">
+            保存
+          </button>
+        </div>
       </div>
     </form>
   );
