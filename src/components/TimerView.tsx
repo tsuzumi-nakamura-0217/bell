@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useTimer } from "@/hooks/use-timer";
 import type { Template } from "@/lib/bells";
-import { touchRecent } from "@/lib/recent";
 import { endMs, nextBell } from "@/lib/schedule";
 import { formatClock } from "@/lib/time";
 
@@ -14,15 +12,24 @@ function isTextInput(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
 }
 
-export function TimerView({ template }: { template: Template }) {
+interface TimerViewProps {
+  template: Template;
+  onEdit(): void;
+  /** 実行中かどうかが変わるたびに呼ぶ（テンプレート切り替え時の確認に使う） */
+  onRunningChange(running: boolean): void;
+}
+
+export function TimerView({ template, onEdit, onRunningChange }: TimerViewProps) {
   const { bells } = template;
   const { timer, elapsed, overtime, ready, audioSupported, toggle, reset, ringNow } = useTimer(bells);
   const [mode, setMode] = useState<ClockMode>("elapsed");
   const end = endMs(bells);
 
+  const running = timer.phase === "running";
   useEffect(() => {
-    touchRecent({ id: template.id, name: template.name });
-  }, [template.id, template.name]);
+    onRunningChange(running);
+  }, [running, onRunningChange]);
+  useEffect(() => () => onRunningChange(false), [onRunningChange]);
 
   // スペースキーでスタート／一時停止。フォーカス中のボタンが作動しないよう keyup も止める。
   useEffect(() => {
@@ -63,21 +70,18 @@ export function TimerView({ template }: { template: Template }) {
   }
 
   return (
-    <main
+    <section
       data-testid="timer-root"
       data-overtime={overtime ? "true" : "false"}
-      className={`flex min-h-screen flex-col gap-6 px-4 py-6 transition-colors ${
+      className={`flex min-h-screen flex-1 flex-col gap-6 px-4 py-6 transition-colors ${
         overtime ? "bg-red-600 text-white" : "bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100"
       }`}
     >
       <header className="flex flex-wrap items-center gap-3">
-        <Link href="/" className="text-sm underline">
-          トップ
-        </Link>
         <h1 className="flex-1 text-xl font-bold">{template.name}</h1>
-        <Link href={`/t/${template.id}/edit`} className="rounded border border-current px-3 py-1 text-sm">
+        <button type="button" onClick={onEdit} className="rounded border border-current px-3 py-1 text-sm">
           編集
-        </Link>
+        </button>
         <button type="button" onClick={toggleFullscreen} className="rounded border border-current px-3 py-1 text-sm">
           全画面
         </button>
@@ -134,17 +138,17 @@ export function TimerView({ template }: { template: Template }) {
               key={bell.at}
               data-testid="bell-item"
               data-done={done ? "true" : "false"}
-              className={`flex justify-between rounded px-3 py-1 ${done ? "opacity-40" : ""}`}
+              className={`grid grid-cols-[4rem_1fr_2.5rem] items-center gap-3 rounded px-3 py-1 ${done ? "opacity-40" : ""}`}
             >
               <span className="font-mono tabular-nums">{formatClock(bell.at)}</span>
-              <span>{"🔔".repeat(bell.count)}</span>
-              {i === bells.length - 1 && <span className="text-sm">終了</span>}
+              <span className="text-right">{"🔔".repeat(bell.count)}</span>
+              <span className="text-right text-sm">{i === bells.length - 1 ? "終了" : ""}</span>
             </li>
           );
         })}
       </ol>
 
       <p className="text-center text-xs opacity-60">スペースキーでスタート／一時停止</p>
-    </main>
+    </section>
   );
 }

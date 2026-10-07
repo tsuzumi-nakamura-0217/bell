@@ -1,17 +1,17 @@
 import { expect, test } from "@playwright/test";
-import { createTemplateViaApi } from "./helpers";
+import { createTemplateViaApi, deleteAllTemplates, openTemplate } from "./helpers";
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, request }) => {
+  await deleteAllTemplates(request);
   await page.clock.install();
 });
 
 test("スタートすると時間が進み、ベル時刻を過ぎたものは済みになり、終了後は超過表示になる", async ({ page, request }) => {
-  const id = await createTemplateViaApi(request, {
+  await createTemplateViaApi(request, {
     name: "短い発表",
     bells: [{ at: 2, count: 1 }, { at: 4, count: 2 }],
   });
-  await page.goto(`/t/${id}`);
-  await expect(page.getByRole("heading", { name: "短い発表" })).toBeVisible();
+  await openTemplate(page, "短い発表");
   await expect(page.getByTestId("clock")).toHaveText("0:00");
   await expect(page.getByTestId("next-bell")).toContainText("0:02");
 
@@ -28,8 +28,8 @@ test("スタートすると時間が進み、ベル時刻を過ぎたものは�
 });
 
 test("一時停止中は時間が進まず、リセットで 0 に戻る", async ({ page, request }) => {
-  const id = await createTemplateViaApi(request, { name: "停止テスト", bells: [{ at: 60, count: 1 }] });
-  await page.goto(`/t/${id}`);
+  await createTemplateViaApi(request, { name: "停止テスト", bells: [{ at: 60, count: 1 }] });
+  await openTemplate(page, "停止テスト");
   await page.getByRole("button", { name: "スタート" }).click();
   await page.clock.runFor(3000);
   await page.getByRole("button", { name: "一時停止" }).click();
@@ -41,18 +41,19 @@ test("一時停止中は時間が進まず、リセットで 0 に戻る", async
 });
 
 test("残り時間表示に切り替えられる", async ({ page, request }) => {
-  const id = await createTemplateViaApi(request, { name: "残り時間", bells: [{ at: 90, count: 1 }] });
-  await page.goto(`/t/${id}`);
+  await createTemplateViaApi(request, { name: "残り時間", bells: [{ at: 90, count: 1 }] });
+  await openTemplate(page, "残り時間");
   await page.getByTestId("clock").click();
   await expect(page.getByTestId("clock-mode")).toHaveText("残り時間");
   await expect(page.getByTestId("clock")).toHaveText("1:30");
 });
 
 test("スペースキー: ボタンにフォーカスがあっても、スタート／一時停止が1回だけ切り替わる", async ({ page, request }) => {
-  const id = await createTemplateViaApi(request, { name: "キー操作", bells: [{ at: 60, count: 1 }] });
-  await page.goto(`/t/${id}`);
-  // ハイドレーションが終わってキー操作を受け付けるまで待つ（スタートボタンは準備完了まで無効）
-  await expect(page.getByRole("button", { name: "スタート" })).toBeEnabled();
+  await createTemplateViaApi(request, { name: "キー操作", bells: [{ at: 60, count: 1 }] });
+  await openTemplate(page, "キー操作");
+  // サイドバーのボタンからフォーカスを外し、ページ本体にある状態からキー操作を始める
+  await page.locator("body").focus();
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
 
   await page.keyboard.press("Space");
   await expect(page.getByRole("button", { name: "一時停止" })).toBeVisible();
@@ -71,11 +72,4 @@ test("スペースキー: ボタンにフォーカスがあっても、スター
   await expect(page.getByTestId("clock")).toHaveText("0:03");
   await page.clock.runFor(2000);
   await expect(page.getByTestId("clock")).toHaveText("0:05");
-});
-
-test("編集ボタンで編集画面へ移動する", async ({ page, request }) => {
-  const id = await createTemplateViaApi(request, { name: "移動", bells: [{ at: 60, count: 1 }] });
-  await page.goto(`/t/${id}`);
-  await page.getByRole("link", { name: "編集" }).click();
-  await expect(page).toHaveURL(new RegExp(`/t/${id}/edit$`));
 });

@@ -14,7 +14,7 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-export function createTemplate(input: TemplateInput): Promise<{ id: string }> {
+export function createTemplate(input: TemplateInput): Promise<Template> {
   return request("/api/templates", { method: "POST", body: JSON.stringify(input) });
 }
 

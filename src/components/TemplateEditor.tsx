@@ -1,19 +1,22 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ApiError, createTemplate, deleteTemplate, updateTemplate } from "@/lib/api-client";
 import { MAX_BELLS, MAX_COUNT, templateInputSchema, type Template } from "@/lib/bells";
 import { issuesToErrors, newRow, rowsToCandidate, templateToRows, type BellRow, type FormErrors } from "@/lib/editor-form";
-import { removeRecent, touchRecent } from "@/lib/recent";
 
 const NETWORK_ERROR = "通信に失敗しました。接続を確認してもう一度お試しください。";
 const COUNT_OPTIONS = Array.from({ length: MAX_COUNT }, (_, i) => i + 1);
 const inputClass = "rounded border border-zinc-300 px-2 py-1 dark:border-zinc-600 dark:bg-zinc-900";
 
-export function TemplateEditor({ initial }: { initial?: Template }) {
-  const router = useRouter();
+interface TemplateEditorProps {
+  initial?: Template;
+  onSaved(template: Template): void;
+  onCancel(): void;
+  onDeleted?(id: string): void;
+}
+
+export function TemplateEditor({ initial, onSaved, onCancel, onDeleted }: TemplateEditorProps) {
   const [name, setName] = useState(initial?.name ?? "");
   const [rows, setRows] = useState<BellRow[]>(() =>
     initial ? templateToRows(initial.bells) : [newRow(240, 1), newRow(300, 2)],
@@ -21,7 +24,6 @@ export function TemplateEditor({ initial }: { initial?: Template }) {
   const [errors, setErrors] = useState<FormErrors>({ rows: {} });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [createdId, setCreatedId] = useState<string | null>(null);
 
   function updateRow(index: number, patch: Partial<BellRow>) {
     setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -42,15 +44,7 @@ export function TemplateEditor({ initial }: { initial?: Template }) {
     setMessage(null);
     setBusy(true);
     try {
-      if (initial) {
-        await updateTemplate(initial.id, parsed.data);
-        touchRecent({ id: initial.id, name: parsed.data.name });
-        router.push(`/t/${initial.id}`);
-      } else {
-        const { id } = await createTemplate(parsed.data);
-        touchRecent({ id, name: parsed.data.name });
-        setCreatedId(id);
-      }
+      onSaved(initial ? await updateTemplate(initial.id, parsed.data) : await createTemplate(parsed.data));
     } catch (error) {
       setMessage(
         error instanceof ApiError && error.status === 404
@@ -77,12 +71,7 @@ export function TemplateEditor({ initial }: { initial?: Template }) {
         return;
       }
     }
-    removeRecent(initial.id);
-    router.push("/");
-  }
-
-  if (createdId) {
-    return <ShareResult id={createdId} />;
+    onDeleted?.(initial.id);
   }
 
   return (
@@ -177,11 +166,11 @@ export function TemplateEditor({ initial }: { initial?: Template }) {
         >
           保存
         </button>
-        {initial && (
+        <button type="button" disabled={busy} onClick={onCancel} className="text-sm underline disabled:opacity-50">
+          キャンセル
+        </button>
+        {initial && onDeleted && (
           <>
-            <Link href={`/t/${initial.id}`} className="text-sm underline">
-              保存せずに戻る
-            </Link>
             <button
               type="button"
               disabled={busy}
@@ -194,44 +183,5 @@ export function TemplateEditor({ initial }: { initial?: Template }) {
         )}
       </div>
     </form>
-  );
-}
-
-function ShareResult({ id }: { id: string }) {
-  const [copied, setCopied] = useState(false);
-  const url = typeof window === "undefined" ? `/t/${id}` : `${window.location.origin}/t/${id}`;
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      <p className="font-semibold">テンプレートを保存しました。このURLを共有してください。</p>
-      <div className="flex gap-2">
-        <input
-          readOnly
-          data-testid="share-url"
-          aria-label="共有URL"
-          value={url}
-          className={`${inputClass} flex-1`}
-          onFocus={(e) => e.currentTarget.select()}
-        />
-        <button type="button" onClick={() => void copy()} className="rounded border border-zinc-300 px-3 dark:border-zinc-600">
-          {copied ? "コピーしました" : "コピー"}
-        </button>
-      </div>
-      <Link
-        href={`/t/${id}`}
-        className="self-start rounded bg-zinc-900 px-5 py-2 font-semibold text-white dark:bg-white dark:text-zinc-900"
-      >
-        タイマーを開く
-      </Link>
-    </div>
   );
 }

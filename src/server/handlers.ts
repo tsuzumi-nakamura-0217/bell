@@ -1,5 +1,5 @@
 import { templateInputSchema, type TemplateInput } from "@/lib/bells";
-import { deleteTemplate, getTemplate, insertTemplate, updateTemplate } from "./templates-repo";
+import { deleteTemplate, getTemplate, insertTemplate, listTemplates, updateTemplate } from "./templates-repo";
 
 const notFound = () => Response.json({ error: "not_found" }, { status: 404 });
 
@@ -27,7 +27,11 @@ export async function createTemplateHandler(db: D1Database, req: Request, now = 
   const parsed = await parseInput(req);
   if (!parsed.ok) return parsed.response;
   const template = await insertTemplate(db, parsed.input, now);
-  return Response.json({ id: template.id }, { status: 201 });
+  return Response.json(template, { status: 201 });
+}
+
+export async function listTemplatesHandler(db: D1Database): Promise<Response> {
+  return Response.json(await listTemplates(db));
 }
 
 export async function getTemplateHandler(db: D1Database, id: string): Promise<Response> {

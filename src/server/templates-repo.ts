@@ -46,6 +46,13 @@ export async function insertTemplate(
   throw new Error(`failed to allocate a unique template id after ${MAX_ID_ATTEMPTS} attempts`);
 }
 
+export async function listTemplates(db: D1Database): Promise<Template[]> {
+  const { results } = await db
+    .prepare("SELECT * FROM templates ORDER BY created_at DESC, id")
+    .all<TemplateRow>();
+  return results.map(toTemplate);
+}
+
 export async function getTemplate(db: D1Database, id: string): Promise<Template | null> {
   const row = await db.prepare("SELECT * FROM templates WHERE id = ?1").bind(id).first<TemplateRow>();
   return row ? toTemplate(row) : null;

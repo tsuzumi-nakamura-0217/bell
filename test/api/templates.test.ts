@@ -4,6 +4,7 @@ import {
   createTemplateHandler,
   deleteTemplateHandler,
   getTemplateHandler,
+  listTemplatesHandler,
   updateTemplateHandler,
   withErrorHandling,
 } from "@/server/handlers";
@@ -25,11 +26,19 @@ beforeEach(async () => {
 });
 
 describe("POST /api/templates", () => {
-  it("201 と id を返し、保存されたテンプレートはベルが時刻順", async () => {
+  it("201 と作成したテンプレートを返し、保存されたテンプレートはベルが時刻順", async () => {
     const res = await createTemplateHandler(db, jsonRequest("POST", valid), 1000);
     expect(res.status).toBe(201);
-    const { id } = (await res.json()) as { id: string };
+    const created = (await res.json()) as { id: string };
+    const { id } = created;
     expect(id).toMatch(/^[a-z0-9]{10}$/);
+    expect(created).toEqual({
+      id,
+      name: "LT大会",
+      bells: [{ at: 240, count: 1 }, { at: 300, count: 2 }],
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
 
     const got = await getTemplateHandler(db, id);
     expect(await got.json()).toEqual({
@@ -67,6 +76,23 @@ describe("insertTemplate", () => {
   it("3回続けて衝突したらエラー", async () => {
     await insertTemplate(db, valid, 1, () => "dupdupdup1");
     await expect(insertTemplate(db, valid, 2, () => "dupdupdup1")).rejects.toThrow();
+  });
+});
+
+describe("GET /api/templates", () => {
+  it("全テンプレートを作成日の新しい順に返す", async () => {
+    await insertTemplate(db, { ...valid, name: "古い" }, 1000);
+    await insertTemplate(db, { ...valid, name: "新しい" }, 3000);
+    await insertTemplate(db, { ...valid, name: "中間" }, 2000);
+    const res = await listTemplatesHandler(db);
+    expect(res.status).toBe(200);
+    const list = (await res.json()) as { name: string; bells: unknown }[];
+    expect(list.map((t) => t.name)).toEqual(["新しい", "中間", "古い"]);
+    expect(list[0].bells).toEqual(valid.bells);
+  });
+
+  it("1件もなければ空配列", async () => {
+    expect(await (await listTemplatesHandler(db)).json()).toEqual([]);
   });
 });
 
