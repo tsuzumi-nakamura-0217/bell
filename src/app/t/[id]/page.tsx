@@ -1,4 +1,5 @@
 import { TemplateNotFound } from "@/components/TemplateNotFound";
+import { TimerView } from "@/components/TimerView";
 import { getDb } from "@/server/db";
 import { getTemplate } from "@/server/templates-repo";
 
@@ -8,9 +9,5 @@ export default async function TimerPage({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   const template = await getTemplate(getDb(), id);
   if (!template) return <TemplateNotFound id={id} />;
-  return (
-    <main className="px-4 py-10">
-      <h1 className="text-2xl font-bold">{template.name}</h1>
-    </main>
-  );
+  return <TimerView template={template} />;
 }
