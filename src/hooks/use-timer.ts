@@ -18,6 +18,8 @@ export function useTimer(bells: readonly Bell[]) {
   // コントローラーはブラウザでのみ作る。画面を離れたら予約済みのベルをすべて止める。
   useEffect(() => {
     const supported = isAudioSupported();
+    // AudioContext の有無はブラウザでしか分からないので、マウント後に反映する
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAudioSupported(supported);
     const c = new TimerController(bells, supported ? new BellPlayer() : null);
     const unsubscribe = c.subscribe(() => {
