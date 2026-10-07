@@ -12,7 +12,7 @@
     {
       "binding": "DB",
       "database_name": "bell-db",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "d4f11173-dc57-405b-abbc-632eb26ba682",
       "migrations_dir": "migrations"
     }
   ],
