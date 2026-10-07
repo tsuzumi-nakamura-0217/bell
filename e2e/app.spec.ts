@@ -132,3 +132,25 @@ test("以前のテンプレート個別 URL はトップへ転送する", async 
   await page.goto("/t/abcdefghij");
   await expect(page).toHaveURL(/\/$/);
 });
+
+test("音色を選んで保存するとタイマー画面に表示され、編集フォームでも選ばれている", async ({ page }) => {
+  await page.goto("/");
+  await sidebar(page).getByRole("button", { name: "新規作成" }).click();
+  await page.getByLabel("テンプレート名").fill("鐘の発表");
+  await expect(page.getByLabel("音色")).toHaveValue("desk-bell");
+  await page.getByLabel("音色").selectOption({ label: "鐘" });
+  await page.getByRole("button", { name: "試聴" }).click();
+  await page.getByRole("button", { name: "保存" }).click();
+
+  await expect(page.getByRole("heading", { name: "鐘の発表" })).toBeVisible();
+  await expect(page.getByTestId("sound-label")).toHaveText("音色：鐘");
+
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await expect(page.getByLabel("音色")).toHaveValue("gong");
+});
+
+test("音色を指定せずに作られたテンプレートは卓上ベルとして表示される", async ({ page, request }) => {
+  await createTemplateViaApi(request, { name: "音色なし", bells: [{ at: 60, count: 1 }] });
+  await openTemplate(page, "音色なし");
+  await expect(page.getByTestId("sound-label")).toHaveText("音色：卓上ベル");
+});

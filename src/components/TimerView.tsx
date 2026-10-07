@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTimer } from "@/hooks/use-timer";
-import type { Template } from "@/lib/bells";
+import { SOUND_LABELS, type Template } from "@/lib/bells";
 import { endMs, nextBell } from "@/lib/schedule";
 import { formatClock } from "@/lib/time";
 import { BellIcon, MaximizeIcon, PauseIcon, PencilIcon, PlayIcon, RotateIcon } from "./icons";
@@ -21,8 +21,8 @@ interface TimerViewProps {
 }
 
 export function TimerView({ template, onEdit, onRunningChange }: TimerViewProps) {
-  const { bells } = template;
-  const { timer, elapsed, overtime, ready, audioSupported, toggle, reset, ringNow } = useTimer(bells);
+  const { bells, sound } = template;
+  const { timer, elapsed, overtime, ready, audioSupported, toggle, reset, ringNow } = useTimer(bells, sound);
   const [mode, setMode] = useState<ClockMode>("elapsed");
   const end = endMs(bells);
 
@@ -92,7 +92,8 @@ export function TimerView({ template, onEdit, onRunningChange }: TimerViewProps)
         <div className="min-w-0 flex-1">
           <h1 className={`truncate font-semibold tracking-tight text-xl md:text-2xl ${overtime ? "" : "text-fg-emphasis"}`}>{template.name}</h1>
           <p className={`text-sm ${overtime ? "text-white/80" : "text-fg-subtle"}`}>
-            ベル{bells.length}つ・終了 {formatClock(end / 1000)}
+            ベル{bells.length}つ・終了 {formatClock(end / 1000)}・
+            <span data-testid="sound-label">音色：{SOUND_LABELS[sound]}</span>
           </p>
         </div>
         <button type="button" onClick={onEdit} className={secondary}>

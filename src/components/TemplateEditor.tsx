@@ -1,10 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { BellPlayer, isAudioSupported } from "@/audio/bell-player";
 import { ApiError, createTemplate, deleteTemplate, updateTemplate } from "@/lib/api-client";
-import { MAX_BELLS, MAX_COUNT, templateInputSchema, type Template } from "@/lib/bells";
+import {
+  DEFAULT_SOUND,
+  MAX_BELLS,
+  MAX_COUNT,
+  SOUND_IDS,
+  SOUND_LABELS,
+  templateInputSchema,
+  type SoundId,
+  type Template,
+} from "@/lib/bells";
 import { issuesToErrors, newRow, rowsToCandidate, templateToRows, type BellRow, type FormErrors } from "@/lib/editor-form";
-import { BellIcon, PlusIcon, TrashIcon } from "./icons";
+import { BellIcon, PlayIcon, PlusIcon, TrashIcon } from "./icons";
 
 const NETWORK_ERROR = "通信に失敗しました。接続を確認してもう一度お試しください。";
 const COUNT_OPTIONS = Array.from({ length: MAX_COUNT }, (_, i) => i + 1);
@@ -24,6 +34,27 @@ export function TemplateEditor({ initial, onSaved, onCancel, onDeleted }: Templa
   const [errors, setErrors] = useState<FormErrors>({ rows: {} });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [sound, setSound] = useState<SoundId>(initial?.sound ?? DEFAULT_SOUND);
+  const previewRef = useRef<BellPlayer | null>(null);
+
+  // フォームを閉じたら試聴の音も止める
+  useEffect(() => () => void previewRef.current?.close(), []);
+
+  async function preview() {
+    if (!isAudioSupported()) return;
+    if (previewRef.current?.sound !== sound) {
+      void previewRef.current?.close();
+      previewRef.current = new BellPlayer({ sound });
+    }
+    const player = previewRef.current;
+    try {
+      await player.unlock();
+      player.cancelAll();
+      player.ringNow();
+    } catch {
+      // 音が出せない環境では何もしない
+    }
+  }
 
   function updateRow(index: number, patch: Partial<BellRow>) {
     setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -35,7 +66,7 @@ export function TemplateEditor({ initial, onSaved, onCancel, onDeleted }: Templa
   }
 
   async function save() {
-    const parsed = templateInputSchema.safeParse(rowsToCandidate(name, rows));
+    const parsed = templateInputSchema.safeParse({ ...rowsToCandidate(name, rows), sound });
     if (!parsed.success) {
       setErrors(issuesToErrors(parsed.error.issues));
       return;
@@ -95,6 +126,30 @@ export function TemplateEditor({ initial, onSaved, onCancel, onDeleted }: Templa
           />
           {errors.name && <span className="text-xs text-red-600 dark:text-red-400">{errors.name}</span>}
         </label>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="template-sound" className="text-sm font-medium text-fg-emphasis">
+            音色
+          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              id="template-sound"
+              className="field pr-8"
+              value={sound}
+              onChange={(e) => setSound(e.target.value as SoundId)}
+            >
+              {SOUND_IDS.map((id) => (
+                <option key={id} value={id}>
+                  {SOUND_LABELS[id]}
+                </option>
+              ))}
+            </select>
+            <button type="button" className="btn-secondary" onClick={() => void preview()}>
+              <PlayIcon />
+              試聴
+            </button>
+          </div>
+        </div>
 
         <fieldset className="flex flex-col gap-3">
           <legend className="mb-1 text-sm font-medium text-fg-emphasis">ベル</legend>

@@ -14,6 +14,7 @@ const t = (id: string, createdAt: number, name = id): Template => ({
   id,
   name,
   bells: [{ at: 60, count: 1 }],
+  sound: "desk-bell",
   createdAt,
   updatedAt: createdAt,
 });

@@ -4,6 +4,20 @@ export const MAX_BELLS = 20;
 export const MAX_AT_SECONDS = 18000;
 export const MAX_COUNT = 5;
 
+export const SOUND_IDS = ["desk-bell", "chime", "gong", "beep"] as const;
+export type SoundId = (typeof SOUND_IDS)[number];
+export const DEFAULT_SOUND: SoundId = "desk-bell";
+export const SOUND_LABELS: Record<SoundId, string> = {
+  "desk-bell": "卓上ベル",
+  chime: "チャイム",
+  gong: "鐘",
+  beep: "電子音",
+};
+
+export function isSoundId(value: unknown): value is SoundId {
+  return typeof value === "string" && (SOUND_IDS as readonly string[]).includes(value);
+}
+
 export const bellSchema = z.object({
   at: z
     .number({ error: "時刻を正しく入力してください" })
@@ -37,6 +51,7 @@ export const templateInputSchema = z.object({
       });
     })
     .transform((bells) => [...bells].sort((a, b) => a.at - b.at)),
+  sound: z.enum(SOUND_IDS, { error: "音色を選んでください" }).default(DEFAULT_SOUND),
 });
 
 export type Bell = z.output<typeof bellSchema>;

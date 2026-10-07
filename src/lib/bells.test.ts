@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { templateInputSchema } from "./bells";
+import { DEFAULT_SOUND, SOUND_IDS, templateInputSchema } from "./bells";
 
 const valid = { name: "LT大会", bells: [{ at: 300, count: 2 }, { at: 240, count: 1 }] };
 
@@ -48,5 +48,16 @@ describe("templateInputSchema", () => {
     });
     expect(r.success).toBe(false);
     expect(r.error?.issues.map((i) => i.path)).toContainEqual(["bells", 2, "at"]);
+  });
+
+  it("音色: 省略すると卓上ベル、用意した音色は受け付け、知らない値は不可", () => {
+    expect(templateInputSchema.parse(valid).sound).toBe(DEFAULT_SOUND);
+    expect(DEFAULT_SOUND).toBe("desk-bell");
+    for (const sound of SOUND_IDS) {
+      expect(templateInputSchema.parse({ ...valid, sound }).sound).toBe(sound);
+    }
+    const r = templateInputSchema.safeParse({ ...valid, sound: "trumpet" });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0].path).toEqual(["sound"]);
   });
 });

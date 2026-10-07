@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BellPlayer, isAudioSupported } from "@/audio/bell-player";
-import type { Bell } from "@/lib/bells";
+import type { Bell, SoundId } from "@/lib/bells";
 import { endMs } from "@/lib/schedule";
 import { elapsedMs, initialTimer, isOvertime, type TimerState } from "@/lib/timer";
 import { TimerController } from "@/lib/timer-controller";
 import { createWakeLock } from "@/lib/wake-lock";
 
-export function useTimer(bells: readonly Bell[]) {
+export function useTimer(bells: readonly Bell[], sound: SoundId) {
   const [controller, setController] = useState<TimerController | null>(null);
   const [timer, setTimer] = useState<TimerState>(initialTimer);
   const [now, setNow] = useState(0);
@@ -21,7 +21,7 @@ export function useTimer(bells: readonly Bell[]) {
     // AudioContext の有無はブラウザでしか分からないので、マウント後に反映する
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAudioSupported(supported);
-    const c = new TimerController(bells, supported ? new BellPlayer() : null);
+    const c = new TimerController(bells, supported ? new BellPlayer({ sound }) : null);
     const unsubscribe = c.subscribe(() => {
       setTimer(c.getState());
       setNow(performance.now());
@@ -31,7 +31,7 @@ export function useTimer(bells: readonly Bell[]) {
       unsubscribe();
       void c.dispose();
     };
-  }, [bells]);
+  }, [bells, sound]);
 
   // 実行中だけ毎フレーム表示を更新する
   useEffect(() => {
