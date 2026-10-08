@@ -247,6 +247,45 @@ describe("BellPlayer", () => {
       expect(scheduledStarts(f.oscillators)).toEqual([15]);
     });
 
+    it("止まったまま resume で戻らない AudioContext は、次の unlock で作り直して鳴らせるようにする", async () => {
+      // iOS では無音の再生を止めると AudioContext が中断され、resume しても戻らないことがある
+      const first = fakeContext();
+      const second = fakeContext();
+      const create = vi.fn().mockReturnValueOnce(first.ctx).mockReturnValueOnce(second.ctx);
+      const player = new BellPlayer({ createContext: create, createKeepAlive: () => null });
+      await player.unlock();
+      player.scheduleDelays([1000]);
+      player.cancelAll(); // リセット
+
+      first.ctx.state = "interrupted";
+      first.ctx.resume.mockImplementation(async () => {});
+      await player.unlock();
+
+      expect(create).toHaveBeenCalledTimes(2);
+      expect(first.ctx.close).toHaveBeenCalled();
+      expect(first.listeners.size).toBe(0);
+      expect(second.ctx.state).toBe("running");
+      player.ringNow();
+      expect(second.oscillators.length).toBeGreaterThan(0);
+    });
+
+    it("予約中に AudioContext を作り直したら、残りのベルを新しい AudioContext に予約し直す", async () => {
+      let wall = 0;
+      const first = fakeContext();
+      const second = fakeContext();
+      const create = vi.fn().mockReturnValueOnce(first.ctx).mockReturnValueOnce(second.ctx);
+      const player = new BellPlayer({ createContext: create, createKeepAlive: () => null, now: () => wall });
+      await player.unlock();
+      player.scheduleDelays([1000, 5000]);
+
+      wall = 3000;
+      first.ctx.state = "interrupted";
+      await player.unlock(); // 「ベルを鳴らす」など
+
+      expect(first.oscillators.every((o) => o.stop.mock.calls.length === 2)).toBe(true);
+      expect(scheduledStarts(second.oscillators)).toEqual([12]);
+    });
+
     it("一時停止中（予約なし）や AudioContext が止まっているあいだは予約し直さない", async () => {
       let wall = 0;
       const f = fakeContext();

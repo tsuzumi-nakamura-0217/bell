@@ -46,10 +46,16 @@ export class BellPlayer implements StrikePlayer {
   /** 最初の await までは同期で動くので、クリックなどのユーザー操作の中から呼ぶ */
   async unlock(): Promise<void> {
     preferPlaybackAudioSession();
+    // iOS では無音の再生を止めたとき（リセットやベルが鳴り終わったとき）に AudioContext が中断され、
+    // resume しても戻らないことがある。止まっていたら、ユーザー操作の中にいるうちに作り直す。
+    const stale = this.ctx && this.ctx.state !== "running" ? this.ctx : null;
+    if (stale) this.discardContext(stale);
     if (!this.ctx) {
       this.ctx = this.createContext();
       this.ctx.addEventListener("statechange", this.resync);
       if (typeof document !== "undefined") document.addEventListener("visibilitychange", this.resync);
+      // 予約中だったベルは、残りを新しい AudioContext に予約し直す
+      if (stale && this.plan) this.scheduleDelays(this.remainingDelays(this.plan));
     }
     if (this.keepAlive === undefined) this.keepAlive = this.createKeepAlive();
     // iOS ではメディアの再生許可をユーザー操作の中でしか取れないので、ここで始めておく（鳴らすベルがなければ予約後に止まる）
@@ -90,7 +96,7 @@ export class BellPlayer implements StrikePlayer {
     const audioElapsed = (ctx.currentTime - plan.ctxStart) * 1000;
     if (Math.abs(wallElapsed - audioElapsed) < DRIFT_TOLERANCE_MS) return;
     this.stopAll();
-    this.scheduleDelays(plan.delaysMs.map((delay) => delay - wallElapsed).filter((delay) => delay > 0));
+    this.scheduleDelays(this.remainingDelays(plan));
   };
 
   async close(): Promise<void> {
@@ -103,6 +109,19 @@ export class BellPlayer implements StrikePlayer {
     ctx.removeEventListener("statechange", this.resync);
     if (typeof document !== "undefined") document.removeEventListener("visibilitychange", this.resync);
     await ctx.close();
+  }
+
+  /** 予約したベルのうち、まだ鳴らす時刻が来ていないものの今からの遅れ */
+  private remainingDelays(plan: StrikePlan): number[] {
+    const wallElapsed = this.now() - plan.wallStart;
+    return plan.delaysMs.map((delay) => delay - wallElapsed).filter((delay) => delay > 0);
+  }
+
+  private discardContext(ctx: AudioContext): void {
+    this.stopAll();
+    ctx.removeEventListener("statechange", this.resync);
+    ctx.close().catch(() => {});
+    this.ctx = null;
   }
 
   private stopAll(): void {
