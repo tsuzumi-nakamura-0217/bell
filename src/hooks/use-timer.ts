@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BellPlayer, isAudioSupported } from "@/audio/bell-player";
 import type { Bell, SoundId } from "@/lib/bells";
+import { bindMediaSession, setMediaSessionPlaying } from "@/lib/media-session";
 import { endMs } from "@/lib/schedule";
 import { elapsedMs, initialTimer, isOvertime, type TimerState } from "@/lib/timer";
 import { TimerController } from "@/lib/timer-controller";
 import { createWakeLock } from "@/lib/wake-lock";
 
-export function useTimer(bells: readonly Bell[], sound: SoundId) {
+export function useTimer(bells: readonly Bell[], sound: SoundId, title: string) {
   const [controller, setController] = useState<TimerController | null>(null);
   const [timer, setTimer] = useState<TimerState>(initialTimer);
   const [now, setNow] = useState(0);
@@ -57,6 +58,23 @@ export function useTimer(bells: readonly Bell[], sound: SoundId) {
   }, [timer.phase, wakeLock]);
 
   useEffect(() => () => void wakeLock.release(), [wakeLock]);
+
+  // ベルを待つあいだはロック画面に再生コントロールが出るので、その再生・一時停止でタイマーを操作できるようにする
+  useEffect(() => {
+    if (!controller) return;
+    const running = () => controller.getState().phase === "running";
+    return bindMediaSession({
+      title,
+      onPlay: () => {
+        if (!running()) void controller.toggle();
+      },
+      onPause: () => {
+        if (running()) void controller.toggle();
+      },
+    });
+  }, [controller, title]);
+
+  useEffect(() => setMediaSessionPlaying(timer.phase === "running"), [timer.phase]);
 
   const toggle = useCallback(() => void controller?.toggle(), [controller]);
   const reset = useCallback(() => controller?.reset(), [controller]);

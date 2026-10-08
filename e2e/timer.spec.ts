@@ -73,3 +73,34 @@ test("スペースキー: ボタンにフォーカスがあっても、スター
   await page.clock.runFor(2000);
   await expect(page.getByTestId("clock")).toHaveText("0:05");
 });
+
+test("ベルを待つあいだは無音の音声をループ再生し（iPhone の画面ロック対策）、一時停止で止める", async ({ page, request }) => {
+  // 無音の audio 要素は DOM に置かないので、play() を横取りして要素を覚えておく
+  await page.addInitScript(() => {
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () {
+      (window as unknown as { keepAlive: HTMLMediaElement }).keepAlive = this;
+      return play.call(this);
+    };
+  });
+  await createTemplateViaApi(request, { name: "ロック対策", bells: [{ at: 60, count: 1 }] });
+  await openTemplate(page, "ロック対策");
+  const keepAlive = () =>
+    page.evaluate(() => {
+      const el = (window as unknown as { keepAlive?: HTMLMediaElement }).keepAlive;
+      return {
+        playing: el ? !el.paused : false,
+        loop: el?.loop ?? false,
+        title: navigator.mediaSession.metadata?.title,
+        playbackState: navigator.mediaSession.playbackState,
+      };
+    });
+
+  await page.getByRole("button", { name: "スタート" }).click();
+  await expect(page.getByRole("button", { name: "一時停止" })).toBeVisible();
+  expect(await keepAlive()).toEqual({ playing: true, loop: true, title: "ロック対策", playbackState: "playing" });
+
+  await page.getByRole("button", { name: "一時停止" }).click();
+  await expect(page.getByRole("button", { name: "再開" })).toBeVisible();
+  expect(await keepAlive()).toMatchObject({ playing: false, playbackState: "paused" });
+});

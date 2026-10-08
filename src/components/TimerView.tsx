@@ -22,7 +22,7 @@ interface TimerViewProps {
 
 export function TimerView({ template, onEdit, onRunningChange }: TimerViewProps) {
   const { bells, sound } = template;
-  const { timer, elapsed, overtime, ready, audioSupported, toggle, reset, ringNow } = useTimer(bells, sound);
+  const { timer, elapsed, overtime, ready, audioSupported, toggle, reset, ringNow } = useTimer(bells, sound, template.name);
   const [mode, setMode] = useState<ClockMode>("elapsed");
   const end = endMs(bells);
 
