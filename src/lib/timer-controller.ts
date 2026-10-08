@@ -1,6 +1,6 @@
 import type { Bell } from "./bells";
 import { planStrikes } from "./schedule";
-import { initialTimer, pauseTimer, resetTimer, startTimer, type TimerState } from "./timer";
+import { elapsedMs, initialTimer, pauseTimer, resetTimer, startTimer, type TimerState } from "./timer";
 
 export interface StrikePlayer {
   unlock(): Promise<void>;
@@ -12,6 +12,7 @@ export interface StrikePlayer {
 
 export class TimerController {
   private state: TimerState = initialTimer;
+  private muted = false;
   private starting = false;
   private disposed = false;
   private readonly listeners = new Set<() => void>();
@@ -24,6 +25,10 @@ export class TimerController {
 
   getState(): TimerState {
     return this.state;
+  }
+
+  isMuted(): boolean {
+    return this.muted;
   }
 
   subscribe(listener: () => void): () => void {
@@ -45,7 +50,7 @@ export class TimerController {
       await this.unlockSafely();
       if (this.disposed) return;
       const now = this.clock();
-      this.player?.scheduleDelays(planStrikes(this.bells, this.state.accumulatedMs).map((s) => s.delayMs));
+      if (!this.muted) this.scheduleFrom(this.state.accumulatedMs);
       this.setState(startTimer(this.state, now));
     } finally {
       this.starting = false;
@@ -56,6 +61,21 @@ export class TimerController {
     if (this.disposed) return;
     this.player?.cancelAll();
     this.setState(resetTimer());
+  }
+
+  /** ミュート中は予約済みのベルを取り消し、以降も鳴らさない。解除すると残りのベルを今から予約し直す。 */
+  async setMuted(muted: boolean): Promise<void> {
+    if (this.disposed || muted === this.muted) return;
+    this.muted = muted;
+    this.notify();
+    if (muted) {
+      this.player?.cancelAll();
+      return;
+    }
+    if (this.state.phase !== "running") return;
+    await this.unlockSafely();
+    if (this.disposed || this.muted || this.state.phase !== "running") return;
+    this.scheduleFrom(elapsedMs(this.state, this.clock()));
   }
 
   async ringNow(): Promise<void> {
@@ -79,9 +99,17 @@ export class TimerController {
     }
   }
 
+  private scheduleFrom(elapsed: number): void {
+    this.player?.scheduleDelays(planStrikes(this.bells, elapsed).map((s) => s.delayMs));
+  }
+
   private setState(next: TimerState): void {
     if (next === this.state) return;
     this.state = next;
+    this.notify();
+  }
+
+  private notify(): void {
     for (const listener of this.listeners) listener();
   }
 }

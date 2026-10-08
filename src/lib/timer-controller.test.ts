@@ -120,4 +120,46 @@ describe("TimerController", () => {
     const p = c.ringNow(); releaseUnlock(); await p;
     expect(player.ringNow).toHaveBeenCalledTimes(1);
   });
+
+  it("実行中にミュートすると予約を取り消し、解除すると今から残りの打音を予約する", async () => {
+    const { player, releaseUnlock } = fakePlayer();
+    const clock = fakeClock();
+    const c = new TimerController(bells, player, clock.now);
+    let p = c.toggle(); releaseUnlock(); await p;
+    clock.advance(1000);
+    await c.setMuted(true);
+    expect(c.isMuted()).toBe(true);
+    expect(player.cancelAll).toHaveBeenCalledTimes(1);
+    clock.advance(2500);
+    p = c.setMuted(false); releaseUnlock(); await p;
+    expect(c.isMuted()).toBe(false);
+    expect(player.scheduleDelays).toHaveBeenLastCalledWith([500, 850]);
+    expect(c.getState().phase).toBe("running");
+  });
+
+  it("ミュート中にスタート・再開しても予約しない", async () => {
+    const { player, releaseUnlock } = fakePlayer();
+    const c = new TimerController(bells, player, fakeClock().now);
+    await c.setMuted(true);
+    const p = c.toggle(); releaseUnlock(); await p;
+    expect(c.getState().phase).toBe("running");
+    expect(player.scheduleDelays).not.toHaveBeenCalled();
+  });
+
+  it("停止中にミュートを解除しても予約しない", async () => {
+    const { player } = fakePlayer();
+    const c = new TimerController(bells, player, fakeClock().now);
+    await c.setMuted(true);
+    await c.setMuted(false);
+    expect(player.scheduleDelays).not.toHaveBeenCalled();
+  });
+
+  it("ミュートの切り替えで subscribe したリスナーを呼ぶ", async () => {
+    const c = new TimerController(bells, null, fakeClock().now);
+    const listener = vi.fn();
+    c.subscribe(listener);
+    await c.setMuted(true);
+    await c.setMuted(true);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
 });

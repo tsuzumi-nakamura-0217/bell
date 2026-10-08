@@ -13,6 +13,7 @@ export function useTimer(bells: readonly Bell[], sound: SoundId, title: string) 
   const [controller, setController] = useState<TimerController | null>(null);
   const [timer, setTimer] = useState<TimerState>(initialTimer);
   const [now, setNow] = useState(0);
+  const [muted, setMuted] = useState(false);
   const [audioSupported, setAudioSupported] = useState(true);
   const wakeLock = useMemo(() => createWakeLock(), []);
 
@@ -25,9 +26,11 @@ export function useTimer(bells: readonly Bell[], sound: SoundId, title: string) 
     const c = new TimerController(bells, supported ? new BellPlayer({ sound }) : null);
     const unsubscribe = c.subscribe(() => {
       setTimer(c.getState());
+      setMuted(c.isMuted());
       setNow(performance.now());
     });
     setController(c);
+    setMuted(false);
     return () => {
       unsubscribe();
       void c.dispose();
@@ -79,6 +82,7 @@ export function useTimer(bells: readonly Bell[], sound: SoundId, title: string) 
   const toggle = useCallback(() => void controller?.toggle(), [controller]);
   const reset = useCallback(() => controller?.reset(), [controller]);
   const ringNow = useCallback(() => void controller?.ringNow(), [controller]);
+  const toggleMute = useCallback(() => void controller?.setMuted(!controller.isMuted()), [controller]);
 
   return {
     timer,
@@ -86,8 +90,10 @@ export function useTimer(bells: readonly Bell[], sound: SoundId, title: string) 
     overtime: isOvertime(timer, now, endMs(bells)),
     ready: controller !== null,
     audioSupported,
+    muted,
     toggle,
     reset,
     ringNow,
+    toggleMute,
   };
 }

@@ -104,3 +104,22 @@ test("ベルを待つあいだは無音の音声をループ再生し（iPhone �
   await expect(page.getByRole("button", { name: "再開" })).toBeVisible();
   expect(await keepAlive()).toMatchObject({ playing: false, playbackState: "paused" });
 });
+
+test("スタート後にミュートすると予定のベルを鳴らさない表示になり、解除で戻る", async ({ page, request }) => {
+  await createTemplateViaApi(request, { name: "消音テスト", bells: [{ at: 60, count: 1 }] });
+  await openTemplate(page, "消音テスト");
+  await page.getByRole("button", { name: "スタート" }).click();
+  await page.clock.runFor(1000);
+
+  await page.getByRole("button", { name: "ミュート", exact: true }).click();
+  const muteButton = page.getByRole("button", { name: "ミュート中", exact: true });
+  await expect(muteButton).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("next-bell")).toHaveText("ミュート中：予定のベルは鳴りません");
+  // ミュート中もタイマーは進む
+  await page.clock.runFor(2000);
+  await expect(page.getByTestId("clock")).toHaveText("0:03");
+
+  await muteButton.click();
+  await expect(page.getByRole("button", { name: "ミュート", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByTestId("next-bell")).toContainText("次のベル 1:00");
+});

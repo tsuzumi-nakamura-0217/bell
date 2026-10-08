@@ -5,7 +5,7 @@ import { useTimer } from "@/hooks/use-timer";
 import { SOUND_LABELS, type Template } from "@/lib/bells";
 import { endMs, nextBell } from "@/lib/schedule";
 import { formatClock } from "@/lib/time";
-import { BellIcon, MaximizeIcon, PauseIcon, PencilIcon, PlayIcon, RotateIcon } from "./icons";
+import { BellIcon, BellOffIcon, MaximizeIcon, PauseIcon, PencilIcon, PlayIcon, RotateIcon } from "./icons";
 
 type ClockMode = "elapsed" | "remaining";
 
@@ -22,7 +22,7 @@ interface TimerViewProps {
 
 export function TimerView({ template, onEdit, onRunningChange }: TimerViewProps) {
   const { bells, sound } = template;
-  const { timer, elapsed, overtime, ready, audioSupported, toggle, reset, ringNow } = useTimer(bells, sound, template.name);
+  const { timer, elapsed, overtime, ready, audioSupported, muted, toggle, reset, ringNow, toggleMute } = useTimer(bells, sound, template.name);
   const [mode, setMode] = useState<ClockMode>("elapsed");
   const end = endMs(bells);
 
@@ -57,9 +57,11 @@ export function TimerView({ template, onEdit, onRunningChange }: TimerViewProps)
       : formatClock(Math.ceil((end - elapsed) / 1000));
 
   const next = nextBell(bells, elapsed);
-  const nextText = next
-    ? `次のベル ${formatClock(next.bell.at)}（${next.bell.count}回）まで ${formatClock(Math.ceil((next.bell.at * 1000 - elapsed) / 1000))}`
-    : "終了時刻を過ぎました";
+  const nextText = muted
+    ? "ミュート中：予定のベルは鳴りません"
+    : next
+      ? `次のベル ${formatClock(next.bell.at)}（${next.bell.count}回）まで ${formatClock(Math.ceil((next.bell.at * 1000 - elapsed) / 1000))}`
+      : "終了時刻を過ぎました";
 
   const toggleLabel = timer.phase === "running" ? "一時停止" : timer.phase === "paused" ? "再開" : "スタート";
 
@@ -153,6 +155,17 @@ export function TimerView({ template, onEdit, onRunningChange }: TimerViewProps)
             <button type="button" disabled={!ready} onClick={ringNow} className={`${secondary} btn-lg`}>
               <BellIcon />
               ベルを鳴らす
+            </button>
+            <button
+              type="button"
+              disabled={!ready}
+              onClick={toggleMute}
+              aria-pressed={muted}
+              title="予定のベルを鳴らさないようにします（「ベルを鳴らす」は鳴ります）"
+              className={`${muted ? primary : secondary} btn-lg`}
+            >
+              {muted ? <BellOffIcon /> : <BellIcon />}
+              {muted ? "ミュート中" : "ミュート"}
             </button>
           </div>
 
